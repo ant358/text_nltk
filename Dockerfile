@@ -7,10 +7,12 @@ WORKDIR $APP_HOME
 COPY requirements-docker.txt .
 # Install the Python requirements
 RUN pip install -r requirements-docker.txt
+# nltk data must be downloaded and installed
+RUN python -m nltk.downloader all
 # Copy the source code - see dockerignore
 COPY . /app
 # expose the port
-EXPOSE 8080
+EXPOSE 8020
 # Entrypoint
 ENTRYPOINT ["python"]
 # Run bash
