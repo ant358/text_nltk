@@ -38,7 +38,7 @@ def get_document(pageid: str) -> dict[str, str]:
 # provide some text to the NER model
 def text_input() -> dict[str, str]:
     return {
-        "pageid":
+        "pageId":
             "1",
         "title":
             "Cylcing News - Liege-Bastogne-Liege",
@@ -66,7 +66,7 @@ def text_input() -> dict[str, str]:
     }
 
 
-# query the graph database to get nodes without a entity relationship
+# query the graph database to get nodes without a keyword relationship
 def get_pageids_from_graph() -> list[str]:
     """
     Get the pageids from the graph database
@@ -85,7 +85,7 @@ def get_pageids_from_graph() -> list[str]:
         return []
 
 
-def get_entity_relationship_from_graph() -> list[str]:
+def get_keyword_relationship_from_graph() -> list[str]:
     """
     Query the graph database to get the pageids
     that have a keyword relationship.
@@ -102,6 +102,6 @@ def get_entity_relationship_from_graph() -> list[str]:
             return [record['n.pageId'] for record in result]
     except ServiceUnavailable:
         logger.error(
-            "Could not connect to the graph database and get the entity relationship"
+            "Could not connect to the graph database and get the keyword relationship"
         )
         return []

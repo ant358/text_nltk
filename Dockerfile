@@ -8,7 +8,7 @@ COPY requirements-docker.txt .
 # Install the Python requirements
 RUN pip install -r requirements-docker.txt
 # nltk data must be downloaded and installed
-RUN python -m nltk.downloader all
+RUN python -m nltk.downloader punkt averaged_perceptron_tagger stopwords wordnet
 # Copy the source code - see dockerignore
 COPY . /app
 # expose the port

@@ -6,7 +6,7 @@ import os
 import pathlib
 from datetime import datetime
 from src.input_data import (get_document, get_pageids_from_graph,
-                            get_entity_relationship_from_graph, text_input)
+                            get_keyword_relationship_from_graph, text_input)
 from src.control import Job_list
 from src.output_data import (Keywords, load_to_graph_db)
 
@@ -69,11 +69,11 @@ def update_jobs():
     # get the pageids of nodes in the graph database
     graph_pageids = get_pageids_from_graph()
     # that do not have a NER result
-    nodes_with_a_ner = get_entity_relationship_from_graph()
+    nodes_with_a_keyword = get_keyword_relationship_from_graph()
     # add the pageids to the job list
     if pageids := [
             pageid for pageid in graph_pageids
-            if pageid not in nodes_with_a_ner
+            if pageid not in nodes_with_a_keyword
     ]:
         create_keyword_nodes.bulk_add(pageids)
         logger.info(f'{len(pageids)} Jobs added to the job list')
@@ -144,7 +144,8 @@ async def get_status():
 async def add_job(job: str):
     """Add a job to the list of jobs"""
     create_keyword_nodes.add(job)
-    logging.info(f"Job {job} added")
+    run()
+    logging.info(f"Job {job} added, running job")
     return {"message": f"Job {job} added"}
 
 
@@ -156,18 +157,18 @@ async def remove_job(job: str):
     return {"message": f"Job {job} removed"}
 
 
-@app.post("/add_jobs_list/{jobs}")
-async def add_jobs_list(jobs: list[str]):
-    """Add a list of jobs to the list of jobs"""
-    create_keyword_nodes.bulk_add(jobs)
-    run()
-    logging.info(f"Jobs {jobs} added")
-    return {"message": f"Jobs {jobs} added"}
+# @app.post("/add_jobs_list/{jobs}")
+# async def add_jobs_list(jobs: list[str]):
+#     """Add a list of jobs to the list of jobs"""
+#     create_keyword_nodes.bulk_add(jobs)
+#     run()
+#     logging.info(f"Jobs {jobs} added")
+#     return {"message": f"Jobs {jobs} added"}
 
 
-@app.post("/update_graph")
-async def update_entity_jobs():
-    """Check the graph for entity relationships and update the jobs list"""
+@app.post("/update_graph_keyword_nodes")
+async def update_keyword_jobs():
+    """Check the graph for has keyword relationships and update the jobs list"""
     update_jobs()
     run()
     logging.info("Jobs list updated")

@@ -129,12 +129,12 @@ def load_to_graph_db(docment: dict[str, str], keyuord_results: dict):
                         freq=v,
                     )
                     logger.info(
-                        f"Created entity node for {k} in document {keyuord_results['pageId']} - {result}"
+                        f"Created keyword node for {k} in document {keyuord_results['pageId']} - {result}"
                     )
                 except ServiceUnavailable as e:
                     logger.exception(e)
                     logger.error(
-                        f"During {keyuord_results['pageid']} could not connect to the graph database for entity creation"
+                        f"During {keyuord_results['pageid']} could not connect to the graph database for keyword creation"
                     )
 
 
