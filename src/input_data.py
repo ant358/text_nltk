@@ -98,7 +98,7 @@ def get_entity_relationship_from_graph() -> list[str]:
         driver = GraphDatabase.driver("bolt://host.docker.internal:7687")
         with driver.session() as session:
             result = session.run(
-                "MATCH (n:Document)-[r:HAS_KEYWORD]->(:Entity) RETURN n.pageId")
+                "MATCH (n:Document)-[r:HAS_KEYWORD]->(:Keyword) RETURN n.pageId")
             return [record['n.pageId'] for record in result]
     except ServiceUnavailable:
         logger.error(

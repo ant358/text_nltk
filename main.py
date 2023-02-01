@@ -5,8 +5,10 @@ import logging
 import os
 import pathlib
 from datetime import datetime
-from src.input_data import get_wiki_page, get_random_wiki_page
+from src.input_data import (get_document, get_pageids_from_graph,
+                            get_entity_relationship_from_graph, text_input)
 from src.control import Job_list
+from src.output_data import (Keywords, load_to_graph_db)
 
 # setup logging
 # get todays date
@@ -55,45 +57,93 @@ logger.info(f'Lets get started! - logginng in "{log_filename}" today')
 app = FastAPI()
 
 # create the job list
-jobs = Job_list()
+create_keyword_nodes = Job_list()
+
+# status
+status = "paused"    # paused, running, stopped
+
+
+def update_jobs():
+    """Get the pageids of nodes in the graph database
+    that do not have a NER result"""
+    # get the pageids of nodes in the graph database
+    graph_pageids = get_pageids_from_graph()
+    # that do not have a NER result
+    nodes_with_a_ner = get_entity_relationship_from_graph()
+    # add the pageids to the job list
+    if pageids := [
+            pageid for pageid in graph_pageids
+            if pageid not in nodes_with_a_ner
+    ]:
+        create_keyword_nodes.bulk_add(pageids)
+        logger.info(f'{len(pageids)} Jobs added to the job list')
+
+
+def run():
+    while len(create_keyword_nodes) > 0:
+        # get the first job
+        job = create_keyword_nodes.get_first_job()
+        try:
+            # get the document
+            document = get_document(job)
+            # run the model
+            keyword_results = Keywords(document)
+            # save the results
+            load_to_graph_db(document, keyword_results.top_nouns)
+            load_to_graph_db(document, keyword_results.top_verbs)
+            # log the results
+            logger.info(f'Job {job} complete')
+        except Exception as e:
+            logger.error(f'Job {job} failed to get document keywords {e}')
+            continue
 
 
 # OUTPUT- routes
 @app.get("/")
 async def root():
     logging.info("Root requested")
-    return {"message": "Template ML API to work with text data"}
-
-
-@app.get("/wiki_page/{page_name}")
-async def wiki_page(page_name: str):
-    """Get the text content of a Wikipedia page"""
-    logging.info(f"Page {page_name} requested")
-    result = get_wiki_page(page_name)
-    return {"title": page_name, "content": result}
-
-
-@app.get("/random_wiki_page")
-async def random_wiki_page():
-    """Get a random Wikipedia page summary"""
-    page_title = get_random_wiki_page()[0]
-    result = get_wiki_page(page_title)
-    logging.info(f"Random page {page_title} requested")
-    return {"title": page_title, "content": result}
+    return {"message": "text_nltk finding keywords in the text"}
 
 
 @app.get("/get_current_jobs")
 async def get_current_jobs():
     """Get the current jobs"""
     logging.info("Current jobs list requested")
-    return {"Current jobs": jobs.jobs}
+    return {"Current jobs": create_keyword_nodes.jobs}
+
+
+@app.get("/example_keywords_result")
+async def example_ner_result():
+    """Get an example of the keyword result
+    show the top nouns from the text database"""
+    logging.info("Example keyword result requested")
+    result = get_document("18942")
+    keyword_results = Keywords(result)
+    return {"Example keyword result": keyword_results.top_nouns}
+
+
+@app.get("/test_keywords_result")
+async def test_keywords_result():
+    """Get an example of the keyword result
+    show the top nound from sample text"""
+    logging.info("Test keyword result requested")
+    result = text_input()
+    keyword_results = Keywords(result)
+    return {"Example keyword result": keyword_results.top_nouns}
+
+
+@app.get("/get_status")
+async def get_status():
+    """Get the status of the controller"""
+    logging.info("Status requested")
+    return {"Status": status}
 
 
 # INPUT routes
 @app.post("/add_job/{job}")
 async def add_job(job: str):
     """Add a job to the list of jobs"""
-    jobs.add(job)
+    create_keyword_nodes.add(job)
     logging.info(f"Job {job} added")
     return {"message": f"Job {job} added"}
 
@@ -101,12 +151,30 @@ async def add_job(job: str):
 @app.post("/remove_job/{job}")
 async def remove_job(job: str):
     """Remove a job from the list of jobs"""
-    jobs.remove(job)
+    create_keyword_nodes.remove(job)
     logging.info(f"Job {job} removed")
     return {"message": f"Job {job} removed"}
+
+
+@app.post("/add_jobs_list/{jobs}")
+async def add_jobs_list(jobs: list[str]):
+    """Add a list of jobs to the list of jobs"""
+    create_keyword_nodes.bulk_add(jobs)
+    run()
+    logging.info(f"Jobs {jobs} added")
+    return {"message": f"Jobs {jobs} added"}
+
+
+@app.post("/update_graph")
+async def update_entity_jobs():
+    """Check the graph for entity relationships and update the jobs list"""
+    update_jobs()
+    run()
+    logging.info("Jobs list updated")
+    return {"message": "Jobs list updated keyword nodes being created"}
 
 
 if __name__ == "__main__":
     # goto localhost:8080/
     # or localhost:8080/docs for the interactive docs
-    uvicorn.run(app, port=8080, host="0.0.0.0")
+    uvicorn.run(app, port=8020, host="0.0.0.0")
